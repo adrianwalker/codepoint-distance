@@ -2,7 +2,7 @@
 
 AWS Lambda REST API to calculate distances between postcodes using Ordnance Survey Code-Point Open data
 
-## Deploy Network
+### Deploy Network
 
 ```bash
 aws cloudformation deploy \
@@ -10,7 +10,7 @@ aws cloudformation deploy \
  --stack-name codepoint-distance-network
 ```
 
-## Package and Deploy Lambda
+### Package and Deploy Lambda
 
 ```bash
 aws cloudformation package \
@@ -26,7 +26,7 @@ aws cloudformation deploy \
  --capabilities CAPABILITY_IAM
 ```
 
-## Upload and Load Data
+### Upload and Load Data
 
 ```bash
 aws s3 cp codepo_gb.zip s3://<BUCKET ID>
@@ -39,7 +39,7 @@ aws lambda invoke \
   response.json
 ```
 
-## Get API URL
+### Get API URL
 
 ```bash
 aws cloudformation describe-stacks \
@@ -47,13 +47,13 @@ aws cloudformation describe-stacks \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue'
 ```
 
-## Curl URL
+### Curl URL
 
 ```bash
 curl -s https://<SERVER ID>.execute-api.eu-west-2.amazonaws.com/Prod/codepoint/distance/<POSTCODE>/<POSTCODE> | json_pp
 ```
 
-## Example Usage and Output
+### Example Usage and Output
 
 ```bash
 curl -s https://77waizvyq3.execute-api.eu-west-2.amazonaws.com/Prod/codepoint/distance/YO241AB/YO17HH | json_pp
