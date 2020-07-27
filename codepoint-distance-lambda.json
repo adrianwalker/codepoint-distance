@@ -1,0 +1,165 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "Resources for codepoint-distance",
+  "Resources": {
+    "CodePointLoadFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": "CodePointLoad",
+        "Handler": "org.adrianwalker.codepointdistance.LoadLambdaHandler::handleRequest",
+        "Runtime": "java11",
+        "CodeUri": "target/codepoint-distance-0.1.0.jar",
+        "MemorySize": 512,
+        "Policies": [
+          "AWSLambdaVPCAccessExecutionRole",
+          "AmazonS3FullAccess"
+        ],
+        "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Ref": "FunctionSecurityGroup"
+            }
+          ],
+          "SubnetIds": [
+            {
+              "Fn::ImportValue": "codepoint-distance-private-subnet"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "ELASTICACHE_HOST": {
+              "Fn::GetAtt": [
+                "ECCluster",
+                "RedisEndpoint.Address"
+              ]
+            },
+            "ELASTICACHE_PORT": {
+              "Fn::GetAtt": [
+                "ECCluster",
+                "RedisEndpoint.Port"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "CodePointDistanceFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "FunctionName": "CodePointDistance",
+        "Handler": "org.adrianwalker.codepointdistance.DistanceLambdaHandler::handleRequest",
+        "Runtime": "java11",
+        "CodeUri": "target/codepoint-distance-0.1.0.jar",
+        "MemorySize": 512,
+        "Policies": "AWSLambdaVPCAccessExecutionRole",
+        "Timeout": 15,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Ref": "FunctionSecurityGroup"
+            }
+          ],
+          "SubnetIds": [
+            {
+              "Fn::ImportValue": "codepoint-distance-private-subnet"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "ELASTICACHE_HOST": {
+              "Fn::GetAtt": [
+                "ECCluster",
+                "RedisEndpoint.Address"
+              ]
+            },
+            "ELASTICACHE_PORT": {
+              "Fn::GetAtt": [
+                "ECCluster",
+                "RedisEndpoint.Port"
+              ]
+            }
+          }
+        },
+        "Events": {
+          "GetResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/codepoint/distance/{fromPostcode}/{toPostcode}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    "ECCluster": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "Engine": "redis",
+        "CacheNodeType": "cache.t2.micro",
+        "NumCacheNodes": 1,
+        "VpcSecurityGroupIds": [
+          {
+            "Fn::GetAtt": [
+              "ECSecurityGroup",
+              "GroupId"
+            ]
+          }
+        ],
+        "CacheSubnetGroupName": {
+          "Ref": "ECSubnetGroup"
+        }
+      }
+    },
+    "ECSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "codepoint-distance - ElastiCache Security Group",
+        "VpcId": {
+          "Fn::ImportValue": "codepoint-distance-vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 6379,
+            "ToPort": 6379,
+            "SourceSecurityGroupId": {
+              "Ref": "FunctionSecurityGroup"
+            }
+          }
+        ]
+      }
+    },
+    "ECSubnetGroup": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {
+        "Description": "codepoint-distance - ElastiCache Subnet Group",
+        "SubnetIds": [
+          {
+            "Fn::ImportValue": "codepoint-distance-private-subnet"
+          }
+        ]
+      }
+    },
+    "FunctionSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "codepoint-distance - Lambda Function Security Group",
+        "VpcId": {
+          "Fn::ImportValue": "codepoint-distance-vpc"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ApiUrl": {
+      "Description": "API URL",
+      "Value": {
+        "Fn::Sub": "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/codepoint/distance/<POSTCODE>/<POSTCODE>"
+      }
+    }
+  }
+}
