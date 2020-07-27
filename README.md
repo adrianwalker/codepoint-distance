@@ -1,4 +1,4 @@
-#codepoint-distance
+# codepoint-distance
 
 AWS Lambda REST API to calculate distances between postcodes using Ordnance Survey Code-Point Open data
 
